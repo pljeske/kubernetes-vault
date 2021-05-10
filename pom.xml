@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.4.5</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+
+  <groupId>de.init.commons</groupId>
+  <artifactId>kubernetes-vault</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <java.version>11</java.version>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <fabric8.kubernetes-client.version>5.3.0</fabric8.kubernetes-client.version>
+    <docker.repository.prefix>pljc</docker.repository.prefix>
+    <docker.repository.suffix>${project.artifactId}</docker.repository.suffix>
+    <docker.image.tag>latest</docker.image.tag>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client</artifactId>
+      <version>${fabric8.kubernetes-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+<!--      <version>2.4.5</version>-->
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.65</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <!-- Build Dockerfile -->
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.13</version>
+        <configuration>
+          <!--if set to true you cannot build offline-->
+          <pullNewerImage>false</pullNewerImage>
+          <!--via repository the complete image name is defined-->
+          <repository>${docker.repository.prefix}/${docker.repository.suffix}</repository>
+          <!--<useMavenSettingsForAuth>true</useMavenSettingsForAuth>-->
+          <tag>${docker.image.tag}</tag>
+          <buildArgs combine.children="append">
+            <JAR_FILE>target/license-operator-0.0.1-SNAPSHOT.jar</JAR_FILE>
+          </buildArgs>
+        </configuration>
+        <executions>
+          <!--
+           | you can skip the whole docker process using the system property dockerfile.skip
+           -->
+          <execution>
+            <!--
+             | you can skip building the image using the system property dockerfile.build.skip
+             -->
+            <id>docker-build</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <phase>install</phase>
+          </execution>
+          <execution>
+            <id>docker-push</id>
+            <!--
+             | you can skip pushing the image using the system property dockerfile.push.skip
+             -->
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <phase>deploy</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>
