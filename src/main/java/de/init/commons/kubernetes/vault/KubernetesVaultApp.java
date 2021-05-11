@@ -13,11 +13,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class KubernetesVaultApp implements CommandLineRunner {
   @Autowired
-  private RSAEncryption encryption;
-  @Autowired
   private KubernetesClient client;
   @Autowired
   private DeploymentWatcher deploymentWatcher;
+  @Autowired
+  private LicenseWatcher licenseWatcher;
+  @Autowired
+  private ConfigMapWatcher configMapWatcher;
 
   public static void main(String[] args) {
     SpringApplication.run(KubernetesVaultApp.class, args);
@@ -26,7 +28,7 @@ public class KubernetesVaultApp implements CommandLineRunner {
   @Override
   public void run(String... args) throws Exception {
     client.apps().deployments().inAnyNamespace().watch(deploymentWatcher);
-    client.secrets().inAnyNamespace().watch(new LicenseWatcher(client, encryption));
-    client.configMaps().inAnyNamespace().watch(new ConfigMapWatcher(encryption));
+    client.secrets().inAnyNamespace().watch(licenseWatcher);
+    client.configMaps().inAnyNamespace().watch(configMapWatcher);
   }
 }

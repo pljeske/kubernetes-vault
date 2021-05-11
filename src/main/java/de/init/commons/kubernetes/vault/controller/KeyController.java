@@ -2,6 +2,7 @@ package de.init.commons.kubernetes.vault.controller;
 
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.bouncycastle.jcajce.provider.asymmetric.RSA;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -22,8 +23,12 @@ import java.nio.file.Paths;
 
 @RestController
 public class KeyController {
-  @Autowired
   private RSAEncryption encryption;
+
+  @Autowired
+  public KeyController(RSAEncryption encryption) {
+    this.encryption = encryption;
+  }
 
   @GetMapping("/publickey")
   public ResponseEntity<Resource> download() throws IOException {

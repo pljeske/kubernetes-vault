@@ -5,6 +5,8 @@ import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -13,11 +15,13 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
+@Component
 public class LicenseWatcher implements Watcher<Secret> {
   public static final String RSA_ANNOTATION = "encrypted";
   private final RSAEncryption encryption;
   private final KubernetesClient client;
 
+  @Autowired
   public LicenseWatcher(KubernetesClient client, RSAEncryption encryption) {
     this.encryption = encryption;
     this.client = client;

@@ -35,7 +35,7 @@ public class DeploymentWatcher implements Watcher<Deployment> {
 
         for (EnvVar variable : environmentVariables) {
           if (variable.getValue().startsWith(ENCRYPTION_ANNOTATION)) {
-            String encrypted = variable.getValue().replaceFirst(ENCRYPTION_ANNOTATION, "");
+            String encrypted = variable.getValue().replaceFirst(ENCRYPTION_ANNOTATION, "").replace(" ", "");
             String decrypted;
             try {
               decrypted = encryption.decrypt(encrypted);
@@ -53,6 +53,6 @@ public class DeploymentWatcher implements Watcher<Deployment> {
 
   @Override
   public void onClose(WatcherException e) {
-    LOG.info("DeplomentWatcher closed.");
+    LOG.info("DeploymentWatcher closed.");
   }
 }
