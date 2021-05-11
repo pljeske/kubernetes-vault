@@ -1,5 +1,6 @@
 package de.init.commons.kubernetes.vault.rsa;
 
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.BadPaddingException;
@@ -18,8 +19,8 @@ import java.util.Base64;
 
 @Component
 public class RSAEncryption {
-  public static final String PUBLIC_KEY_PATH = "public.key";
-  private static final String PRIVATE_KEY_PATH = "private.key";
+  public static final String PUBLIC_KEY_PATH = "/keys/public.key";
+  private static final String PRIVATE_KEY_PATH = "/keys/private.key";
   private static final String TRANSFORMATION = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
   private static final String RSA = "RSA";
 
@@ -42,24 +43,7 @@ public class RSAEncryption {
   }
 
   public RSAEncryption() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
-//    // Get an instance of the RSA key generator
-//    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA);
-//    keyPairGenerator.initialize(4096);
-//
-//    // Generate the KeyPair
-//    KeyPair keyPair = keyPairGenerator.generateKeyPair();
-//
-//    // Get the public and private key
-//    publicKey = keyPair.getPublic();
-//    privateKey = keyPair.getPrivate();
-//    try (FileOutputStream fos = new FileOutputStream("public.key")) {
-//      fos.write(publicKey.getEncoded());
-//    }
-//    try (FileOutputStream fos = new FileOutputStream("private.key")) {
-//      fos.write(privateKey.getEncoded());
-//    }
-
-    File publicKeyFile = new File(getClass().getClassLoader().getResource(PUBLIC_KEY_PATH).getFile());
+    File publicKeyFile = new File(getClass().getResource(PUBLIC_KEY_PATH).getFile());
     byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
     KeyFactory keyFactory = KeyFactory.getInstance(RSA);
     EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
@@ -80,7 +64,7 @@ public class RSAEncryption {
     cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
     //Perform Encryption
-    return cipher.doFinal(plainText.getBytes()) ;
+    return cipher.doFinal(plainText.getBytes());
   }
 
   public String decrypt (byte[] cipherTextArray) throws NoSuchPaddingException,
@@ -100,5 +84,9 @@ public class RSAEncryption {
   public String decrypt(String cipherText) throws IllegalBlockSizeException, InvalidKeyException, BadPaddingException,
       NoSuchAlgorithmException, NoSuchPaddingException {
     return decrypt(Base64.getDecoder().decode(cipherText));
+  }
+
+  private ClassPathResource getResource(String path) {
+    return new ClassPathResource(path);
   }
 }

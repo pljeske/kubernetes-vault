@@ -1,6 +1,7 @@
 package de.init.commons.kubernetes.vault;
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import de.init.commons.kubernetes.vault.watcher.ConfigMapWatcher;
+import de.init.commons.kubernetes.vault.watcher.DeploymentWatcher;
 import de.init.commons.kubernetes.vault.watcher.LicenseWatcher;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -22,6 +23,7 @@ public class KubernetesVaultApp implements CommandLineRunner {
 
   @Override
   public void run(String... args) throws Exception {
+    client.apps().deployments().inAnyNamespace().watch(new DeploymentWatcher(client));
     client.secrets().inAnyNamespace().watch(new LicenseWatcher(client, encryption));
     client.configMaps().inAnyNamespace().watch(new ConfigMapWatcher(encryption));
   }
