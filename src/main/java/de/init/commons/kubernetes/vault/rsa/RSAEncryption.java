@@ -19,8 +19,8 @@ import java.util.Base64;
 
 @Component
 public class RSAEncryption {
-  public static final String PUBLIC_KEY_PATH = "/keys/public.key";
-  private static final String PRIVATE_KEY_PATH = "/keys/private.key";
+  public static final String PUBLIC_KEY_PATH = "keys/public.key";
+  private static final String PRIVATE_KEY_PATH = "keys/private.key";
   private static final String TRANSFORMATION = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
   private static final String RSA = "RSA";
 
@@ -43,15 +43,16 @@ public class RSAEncryption {
   }
 
   public RSAEncryption() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
-    File publicKeyFile = new File(getClass().getResource(PUBLIC_KEY_PATH).getFile());
-    byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
-    KeyFactory keyFactory = KeyFactory.getInstance(RSA);
-    EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-    publicKey = keyFactory.generatePublic(publicKeySpec);
-
     File privateKeyFile = new File(getClass().getClassLoader().getResource(PRIVATE_KEY_PATH).getFile());
     byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
     EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+
+    File publicKeyFile = new File(getClass().getClassLoader().getResource(PUBLIC_KEY_PATH).getFile());
+    byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
+    KeyFactory keyFactory = KeyFactory.getInstance(RSA);
+    EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
+
+    publicKey = keyFactory.generatePublic(publicKeySpec);
     privateKey = keyFactory.generatePrivate(privateKeySpec);
   }
 
@@ -84,9 +85,5 @@ public class RSAEncryption {
   public String decrypt(String cipherText) throws IllegalBlockSizeException, InvalidKeyException, BadPaddingException,
       NoSuchAlgorithmException, NoSuchPaddingException {
     return decrypt(Base64.getDecoder().decode(cipherText));
-  }
-
-  private ClassPathResource getResource(String path) {
-    return new ClassPathResource(path);
   }
 }

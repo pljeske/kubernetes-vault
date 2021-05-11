@@ -25,29 +25,29 @@ public class LicenseWatcher implements Watcher<Secret> {
 
   @Override
   public void eventReceived(Action action, Secret secret) {
-    Map<String,String> annotations = secret.getMetadata().getAnnotations();
-    Map<String,String> data = secret.getData();
-    if (annotations.containsKey(RSA_ANNOTATION)) {
-      if ("true".equals(annotations.get(RSA_ANNOTATION))) {
-        for (String key : data.keySet()) {
-          try {
-            String decryptedText = encryption.decrypt(data.get(key));
-          } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-          } catch (InvalidKeyException e) {
-            e.printStackTrace();
-          } catch (BadPaddingException e) {
-            e.printStackTrace();
-          } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-          } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-          }
-//          client.secrets().inNamespace(secret.getMetadata().getNamespace()).withName(secret.getMetadata().getName()).edit().
-        }
-//        secret.getData().forEach((key, value) -> );
-      }
-    }
+//    Map<String,String> annotations = secret.getMetadata().getAnnotations();
+//    Map<String,String> data = secret.getData();
+//    if (annotations.containsKey(RSA_ANNOTATION)) {
+//      if ("true".equals(annotations.get(RSA_ANNOTATION))) {
+//        for (String key : data.keySet()) {
+//          try {
+//            String decryptedText = encryption.decrypt(data.get(key));
+//          } catch (IllegalBlockSizeException e) {
+//            e.printStackTrace();
+//          } catch (InvalidKeyException e) {
+//            e.printStackTrace();
+//          } catch (BadPaddingException e) {
+//            e.printStackTrace();
+//          } catch (NoSuchAlgorithmException e) {
+//            e.printStackTrace();
+//          } catch (NoSuchPaddingException e) {
+//            e.printStackTrace();
+//          }
+////          client.secrets().inNamespace(secret.getMetadata().getNamespace()).withName(secret.getMetadata().getName()).edit().
+//        }
+////        secret.getData().forEach((key, value) -> );
+//      }
+//    }
   }
 
   @Override

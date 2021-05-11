@@ -16,6 +16,8 @@ public class KubernetesVaultApp implements CommandLineRunner {
   private RSAEncryption encryption;
   @Autowired
   private KubernetesClient client;
+  @Autowired
+  private DeploymentWatcher deploymentWatcher;
 
   public static void main(String[] args) {
     SpringApplication.run(KubernetesVaultApp.class, args);
@@ -23,7 +25,7 @@ public class KubernetesVaultApp implements CommandLineRunner {
 
   @Override
   public void run(String... args) throws Exception {
-    client.apps().deployments().inAnyNamespace().watch(new DeploymentWatcher(client));
+    client.apps().deployments().inAnyNamespace().watch(deploymentWatcher);
     client.secrets().inAnyNamespace().watch(new LicenseWatcher(client, encryption));
     client.configMaps().inAnyNamespace().watch(new ConfigMapWatcher(encryption));
   }
