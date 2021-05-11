@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "encryption.prefix",
+      "type": "java.lang.String",
+      "description": "Prefix that is used in environment variables to indicate the value has to be decrypted."
+  }
+] }
