@@ -1,19 +1,23 @@
 package de.init.commons.kubernetes.vault.watcher;
 
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.EnvFromSource;
-import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 @Component
 public class DeploymentWatcher implements Watcher<Deployment> {
   private static final Logger LOG = LoggerFactory.getLogger(DeploymentWatcher.class);
@@ -33,6 +37,9 @@ public class DeploymentWatcher implements Watcher<Deployment> {
       for (Container container : containers) {
         List<EnvVar> environmentVariables = container.getEnv();
 
+        Map<String,String> decryptedVariables = new HashMap<>();
+        List<EnvVar> variablesToRemove = new ArrayList<>();
+
         for (EnvVar variable : environmentVariables) {
           if (variable.getValue().startsWith(ENCRYPTION_ANNOTATION)) {
             String encrypted = variable.getValue().replaceFirst(ENCRYPTION_ANNOTATION, "").replace(" ", "");
@@ -43,10 +50,24 @@ public class DeploymentWatcher implements Watcher<Deployment> {
               decrypted = variable.getValue();
               LOG.error("Variable couldn't be decrypted: {}", variable.getName());
             }
-            variable.setValue(decrypted);
+            decryptedVariables.put(variable.getName(), Base64.toBase64String(decrypted.getBytes(StandardCharsets.UTF_8)));
+            variablesToRemove.add(variable);
           }
         }
-        client.apps().deployments().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(deployment);
+        if (!decryptedVariables.isEmpty()) {
+          Secret secret = createSecret(decryptedVariables, deployment);
+          secret = client.secrets().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(secret);
+          EnvFromSource envFromSource = new EnvFromSourceBuilder()
+              .withNewSecretRef().withName(secret.getMetadata().getName()).endSecretRef().build();
+          List<EnvFromSource> envFromSources = container.getEnvFrom();
+          envFromSources.add(envFromSource);
+          container.setEnvFrom(envFromSources);
+
+          variablesToRemove.forEach(var -> container.getEnv().remove(var));
+
+          client.apps().deployments().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(deployment);
+        }
+
       }
     }
   }
@@ -54,5 +75,16 @@ public class DeploymentWatcher implements Watcher<Deployment> {
   @Override
   public void onClose(WatcherException e) {
     LOG.info("DeploymentWatcher closed.");
+  }
+
+  private Secret createSecret(Map<String,String> variables, Deployment deployment) {
+//    variables.put("TEST", Base64.toBase64String("TEST".getBytes(StandardCharsets.UTF_8)));
+
+    return new SecretBuilder()
+        .withNewMetadata()
+        .withName(deployment.getMetadata().getName())
+        .endMetadata()
+        .withData(variables)
+        .build();
   }
 }

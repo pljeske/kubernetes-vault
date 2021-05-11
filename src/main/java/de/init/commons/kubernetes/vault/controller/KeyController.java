@@ -2,7 +2,6 @@ package de.init.commons.kubernetes.vault.controller;
 
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import org.apache.tomcat.util.codec.binary.Base64;
-import org.bouncycastle.jcajce.provider.asymmetric.RSA;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -10,11 +9,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.websocket.server.PathParam;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +20,7 @@ import java.nio.file.Paths;
 
 @RestController
 public class KeyController {
-  private RSAEncryption encryption;
+  private final RSAEncryption encryption;
 
   @Autowired
   public KeyController(RSAEncryption encryption) {
