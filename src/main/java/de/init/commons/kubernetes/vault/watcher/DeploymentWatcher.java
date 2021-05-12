@@ -22,7 +22,8 @@ import java.util.Map;
 @Component
 public class DeploymentWatcher implements Watcher<Deployment> {
   private static final Logger LOG = LoggerFactory.getLogger(DeploymentWatcher.class);
-//  public static final String ENCRYPTION_ANNOTATION = "ENCRYPTED:";
+  public static final String DECRYPTED_FOR = "decrypted_for";
+
   private final KubernetesClient client;
   private final RSAEncryption encryption;
 
@@ -37,26 +38,46 @@ public class DeploymentWatcher implements Watcher<Deployment> {
   @Override
   public void eventReceived(Action action, Deployment deployment) {
     if (action.equals(Action.ADDED) || action.equals(Action.MODIFIED)) {
-      List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
-      for (Container container : containers) {
-        List<EnvVar> environmentVariables = container.getEnv();
+      processEncryptedVariables(deployment);
+    }
+    if (action.equals(Action.DELETED)) {
+      deleteAssociatedSecrets(deployment);
+    }
+  }
 
-        Map<String,String> decryptedVariables = new HashMap<>();
-        List<EnvVar> variablesToRemove = new ArrayList<>();
-
-        for (EnvVar variable : environmentVariables) {
-          if (variable.getValue().startsWith(encryptionPrefix)) {
-            String decrypted = decryptEnvVar(variable);
-            decryptedVariables.put(variable.getName(), Base64.toBase64String(decrypted.getBytes(StandardCharsets.UTF_8)));
-            variablesToRemove.add(variable);
-          }
+  private void deleteAssociatedSecrets(Deployment deployment) {
+    String namespace = deployment.getMetadata().getNamespace();
+    List<Secret> secrets = client.secrets().inNamespace(namespace).list().getItems();
+    secrets.forEach(secret -> {
+      if (secret.getMetadata().getAnnotations().containsKey(DECRYPTED_FOR)) {
+        String value = secret.getMetadata().getAnnotations().get(DECRYPTED_FOR);
+        if (value.equals(deployment.getMetadata().getName())) {
+          client.secrets().delete(secret);
         }
-        if (!decryptedVariables.isEmpty()) {
-          Secret secret = createSecret(decryptedVariables, deployment);
-          updateKubernetesResources(deployment, container, variablesToRemove, secret);
-        }
-
       }
+    });
+  }
+
+  private void processEncryptedVariables(Deployment deployment) {
+    List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
+    for (Container container : containers) {
+      List<EnvVar> environmentVariables = container.getEnv();
+
+      Map<String,String> decryptedVariables = new HashMap<>();
+      List<EnvVar> variablesToRemove = new ArrayList<>();
+
+      for (EnvVar variable : environmentVariables) {
+        if (variable.getValue() != null && variable.getValue().startsWith(encryptionPrefix)) {
+          String decrypted = decryptEnvVar(variable);
+          decryptedVariables.put(variable.getName(), Base64.toBase64String(decrypted.getBytes(StandardCharsets.UTF_8)));
+          variablesToRemove.add(variable);
+        }
+      }
+      if (!decryptedVariables.isEmpty()) {
+        Secret secret = createSecret(decryptedVariables, deployment);
+        updateKubernetesResources(deployment, container, variablesToRemove, secret);
+      }
+
     }
   }
 
@@ -91,9 +112,12 @@ public class DeploymentWatcher implements Watcher<Deployment> {
   }
 
   public static Secret createSecret(Map<String,String> variables, Deployment deployment) {
+    Map<String,String> annotations = Map.of(DECRYPTED_FOR, deployment.getMetadata().getName());
     return new SecretBuilder()
         .withNewMetadata()
         .withName(deployment.getMetadata().getName())
+        .withAnnotations(annotations)
+        .withNamespace(deployment.getMetadata().getNamespace())
         .endMetadata()
         .withData(variables)
         .build();

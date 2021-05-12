@@ -29,7 +29,8 @@ public class KeyController {
 
   @GetMapping("/publickey")
   public ResponseEntity<Resource> download() throws IOException {
-    File file = new File(getClass().getClassLoader().getResource(RSAEncryption.PUBLIC_KEY_PATH).getFile());
+    File file = encryption.getPublicKeyFile();
+//    File file = new File(getClass().getClassLoader().getResource(RSAEncryption.PUBLIC_KEY_PATH).getFile());
 
     HttpHeaders header = new HttpHeaders();
     header.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=public.key");

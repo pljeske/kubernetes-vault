@@ -1,5 +1,7 @@
 package de.init.commons.kubernetes.vault.rsa;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.BadPaddingException;
@@ -18,26 +20,56 @@ import java.util.Base64;
 
 @Component
 public class RSAEncryption {
-  public static final String PUBLIC_KEY_PATH = "keys/public.key";
+  private static final Logger LOG = LoggerFactory.getLogger(RSAEncryption.class);
+  public static final String PUBLIC_KEY_PATH = "./keys/public.key";
   public static final String TRANSFORMATION = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
   public static final String ALGORITHM = "RSA";
-  private static final String PRIVATE_KEY_PATH = "keys/private.key";
+  private static final String PRIVATE_KEY_PATH = "./keys/private.key";
 
+  private File publicKeyFile;
   private final PublicKey publicKey;
   private final PrivateKey privateKey;
 
   public RSAEncryption() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
-    File privateKeyFile = new File(getClass().getClassLoader().getResource(PRIVATE_KEY_PATH).getFile());
-    byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
+    byte[] privateKeyBytes = getKeyBytes(PRIVATE_KEY_PATH);
     EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
 
-    File publicKeyFile = new File(getClass().getClassLoader().getResource(PUBLIC_KEY_PATH).getFile());
-    byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
-    KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+    byte[] publicKeyBytes = getKeyBytes(PUBLIC_KEY_PATH);
     EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
 
+    KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
     publicKey = keyFactory.generatePublic(publicKeySpec);
     privateKey = keyFactory.generatePrivate(privateKeySpec);
+  }
+
+  private byte[] getKeyBytes(String path) throws IOException {
+//    byte[] keyBytes;
+//    File keyFile = null;
+//    URL url = getClass().getClassLoader().getResource(path);
+//    if (url != null) {
+//      keyFile = new File(url.getFile());
+//    }
+//    try {
+//      keyBytes = Files.readAllBytes(keyFile.toPath());
+//    } catch (Exception e) {
+//      keyFile = new File("./" + path);
+//      keyBytes = Files.readAllBytes(keyFile.toPath());
+//    }
+//    if (path.equals(PUBLIC_KEY_PATH)) {
+//      publicKeyFile = keyFile;
+//    }
+    byte[] keyBytes;
+    try {
+      File keyFile = new File(path);
+      keyBytes = Files.readAllBytes(keyFile.toPath());
+      if (path.equals(PUBLIC_KEY_PATH)) {
+        publicKeyFile = keyFile;
+      }
+    } catch (Exception e) {
+      LOG.error("The following file was not found: {}", path, e);
+      throw new RuntimeException();
+    }
+    return keyBytes;
   }
 
   public byte[] encrypt (String plainText) throws Exception {
@@ -68,5 +100,9 @@ public class RSAEncryption {
   public String decrypt(String cipherText) throws IllegalBlockSizeException, InvalidKeyException, BadPaddingException,
       NoSuchAlgorithmException, NoSuchPaddingException {
     return decrypt(Base64.getDecoder().decode(cipherText));
+  }
+
+  public File getPublicKeyFile(){
+    return publicKeyFile;
   }
 }
