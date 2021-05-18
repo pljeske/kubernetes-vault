@@ -9,6 +9,6 @@ import org.springframework.context.annotation.Configuration;
 public class KubernetesConfig {
   @Bean
   public KubernetesClient getKubernetesClient() {
-    return new DefaultKubernetesClient();
+    return new DefaultKubernetesClient("https://kubernetes.docker.internal:6443");
   }
 }

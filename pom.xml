@@ -22,6 +22,7 @@
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <fabric8.kubernetes-client.version>5.3.0</fabric8.kubernetes-client.version>
+    <operator-framework.version>1.8.3</operator-framework.version>
     <docker.repository.prefix>pljc</docker.repository.prefix>
     <docker.repository.suffix>${project.artifactId}</docker.repository.suffix>
     <docker.image.tag>latest</docker.image.tag>
@@ -33,6 +34,11 @@
       <artifactId>kubernetes-client</artifactId>
       <version>${fabric8.kubernetes-client.version}</version>
     </dependency>
+<!--    <dependency>-->
+<!--      <groupId>io.javaoperatorsdk</groupId>-->
+<!--      <artifactId>operator-framework</artifactId>-->
+<!--      <version>${operator-framework.version}</version>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>

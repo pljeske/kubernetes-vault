@@ -4,13 +4,10 @@ import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -20,106 +17,89 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class DeploymentWatcher implements Watcher<Deployment> {
+public class DeploymentWatcher extends AbstractWatcher<Deployment> {
   private static final Logger LOG = LoggerFactory.getLogger(DeploymentWatcher.class);
-  public static final String DECRYPTED_FOR = "decrypted_for";
-
-  private final KubernetesClient client;
-  private final RSAEncryption encryption;
-
-  @Value("${encryption.prefix}")
-  private String encryptionPrefix;
 
   @Autowired
   public DeploymentWatcher(KubernetesClient client, RSAEncryption encryption) {
-    this.client = client;
-    this.encryption = encryption;
+    super(client, encryption);
   }
+
   @Override
-  public void eventReceived(Action action, Deployment deployment) {
-    if (action.equals(Action.ADDED) || action.equals(Action.MODIFIED)) {
-      processEncryptedVariables(deployment);
+  public void added(Deployment resource) {
+    Map<String,String> annotations = resource.getMetadata().getAnnotations();
+    if (annotations.containsKey(encryptionAnnotation)) {
+      String value = annotations.get(encryptionAnnotation);
+
     }
-    if (action.equals(Action.DELETED)) {
-      deleteAssociatedSecrets(deployment);
+    if (annotations.containsKey(encryptionAnnotation) && annotations.get(encryptionAnnotation).equals("true")) {
+      List<Container> containers = resource.getSpec().getTemplate().getSpec().getContainers();
+      for (Container container : containers) {
+        List<EnvVar> environmentVariables = container.getEnv();
+
+        Map<String,String> decryptedVariables = new HashMap<>();
+        List<EnvVar> variablesToRemove = new ArrayList<>();
+
+        for (EnvVar variable : environmentVariables) {
+          if (variable.getValue() != null && variable.getValue().startsWith(encryptionPrefix)) {
+            String decrypted = decrypt(variable);
+            decryptedVariables.put(variable.getName(), Base64.toBase64String(decrypted.getBytes(StandardCharsets.UTF_8)));
+            variablesToRemove.add(variable);
+          }
+        }
+        if (!decryptedVariables.isEmpty()) {
+          Secret secret = createSecret(decryptedVariables, resource);
+          resource.getMetadata().getAnnotations().put("decrypted", "true");
+          secret = client.secrets().inNamespace(resource.getMetadata().getNamespace()).createOrReplace(secret);
+          EnvFromSource envFromSource = new EnvFromSourceBuilder()
+              .withNewSecretRef().withName(secret.getMetadata().getName()).endSecretRef().build();
+          List<EnvFromSource> envFromSources = container.getEnvFrom();
+          envFromSources.add(envFromSource);
+          container.setEnvFrom(envFromSources);
+
+          variablesToRemove.forEach(var -> container.getEnv().remove(var));
+        }
+        resource.getMetadata().getAnnotations().put(encryptionAnnotation, "false");
+        client.apps().deployments().inNamespace(resource.getMetadata().getNamespace()).createOrReplace(resource);
+      }
     }
   }
 
-  private void deleteAssociatedSecrets(Deployment deployment) {
-    String namespace = deployment.getMetadata().getNamespace();
+  @Override
+  public void modified(Deployment resource) {
+    LOG.debug("TEST: {}", resource.getMetadata().getAnnotations());
+    Map<String,String> annotations = resource.getMetadata().getAnnotations();
+    if (annotations.containsKey(encryptionAnnotation) && annotations.get(encryptionAnnotation).equals("true")) {
+      added(resource);
+    }
+  }
+
+  @Override
+  public void deleted(Deployment resource) {
+    String namespace = resource.getMetadata().getNamespace();
     List<Secret> secrets = client.secrets().inNamespace(namespace).list().getItems();
-    secrets.forEach(secret -> {
+    for (Secret secret : secrets) {
       if (secret.getMetadata().getAnnotations().containsKey(DECRYPTED_FOR)) {
         String value = secret.getMetadata().getAnnotations().get(DECRYPTED_FOR);
-        if (value.equals(deployment.getMetadata().getName())) {
+        if (value.equals(resource.getMetadata().getName())) {
           client.secrets().delete(secret);
         }
       }
-    });
-  }
-
-  private void processEncryptedVariables(Deployment deployment) {
-    List<Container> containers = deployment.getSpec().getTemplate().getSpec().getContainers();
-    for (Container container : containers) {
-      List<EnvVar> environmentVariables = container.getEnv();
-
-      Map<String,String> decryptedVariables = new HashMap<>();
-      List<EnvVar> variablesToRemove = new ArrayList<>();
-
-      for (EnvVar variable : environmentVariables) {
-        if (variable.getValue() != null && variable.getValue().startsWith(encryptionPrefix)) {
-          String decrypted = decryptEnvVar(variable);
-          decryptedVariables.put(variable.getName(), Base64.toBase64String(decrypted.getBytes(StandardCharsets.UTF_8)));
-          variablesToRemove.add(variable);
-        }
-      }
-      if (!decryptedVariables.isEmpty()) {
-        Secret secret = createSecret(decryptedVariables, deployment);
-        updateKubernetesResources(deployment, container, variablesToRemove, secret);
-      }
-
     }
   }
 
-  public String decryptEnvVar(EnvVar variable) {
-    String encrypted = variable.getValue().replaceFirst(encryptionPrefix, "").replace(" ", "");
-    String decrypted;
-    try {
-      decrypted = encryption.decrypt(encrypted);
-    } catch (Exception e) {
-      decrypted = variable.getValue();
-      LOG.error("Variable couldn't be decrypted: {}", variable.getName(), e);
-    }
-    return decrypted;
-  }
 
-  private void updateKubernetesResources(Deployment deployment, Container container, List<EnvVar> variablesToRemove, Secret secret) {
-    secret = client.secrets().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(secret);
-    EnvFromSource envFromSource = new EnvFromSourceBuilder()
-        .withNewSecretRef().withName(secret.getMetadata().getName()).endSecretRef().build();
-    List<EnvFromSource> envFromSources = container.getEnvFrom();
-    envFromSources.add(envFromSource);
-    container.setEnvFrom(envFromSources);
-
-    variablesToRemove.forEach(var -> container.getEnv().remove(var));
-
-    client.apps().deployments().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(deployment);
-  }
-
-  @Override
-  public void onClose(WatcherException e) {
-    LOG.error("DeploymentWatcher closed because of an Exception.", e);
-  }
-
-  public static Secret createSecret(Map<String,String> variables, Deployment deployment) {
-    Map<String,String> annotations = Map.of(DECRYPTED_FOR, deployment.getMetadata().getName());
-    return new SecretBuilder()
-        .withNewMetadata()
-        .withName(deployment.getMetadata().getName())
-        .withAnnotations(annotations)
-        .withNamespace(deployment.getMetadata().getNamespace())
-        .endMetadata()
-        .withData(variables)
-        .build();
-  }
+//  private void updateKubernetesResources(Deployment deployment, Container container, List<EnvVar> variablesToRemove, Secret secret) {
+//    secret = client.secrets().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(secret);
+//    EnvFromSource envFromSource = new EnvFromSourceBuilder()
+//        .withNewSecretRef().withName(secret.getMetadata().getName()).endSecretRef().build();
+//    List<EnvFromSource> envFromSources = container.getEnvFrom();
+//    envFromSources.add(envFromSource);
+//    container.setEnvFrom(envFromSources);
+//
+//    variablesToRemove.forEach(var -> container.getEnv().remove(var));
+//
+//    client.apps().deployments().inNamespace(deployment.getMetadata().getNamespace()).replace(deployment);
+////    client.apps().deployments().inNamespace(deployment.getMetadata().getNamespace()).createOrReplace(deployment);
+//  }
 }

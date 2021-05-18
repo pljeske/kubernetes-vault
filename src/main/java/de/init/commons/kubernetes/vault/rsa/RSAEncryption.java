@@ -97,10 +97,17 @@ public class RSAEncryption {
     return new String(decryptedTextArray);
   }
 
+  public String decryptBase64(String base64EncodedCipherText) throws IllegalBlockSizeException, InvalidKeyException, BadPaddingException,
+      NoSuchAlgorithmException, NoSuchPaddingException {
+    return decrypt(Base64.getDecoder().decode(base64EncodedCipherText));
+  }
+
   public String decrypt(String cipherText) throws IllegalBlockSizeException, InvalidKeyException, BadPaddingException,
       NoSuchAlgorithmException, NoSuchPaddingException {
-    return decrypt(Base64.getDecoder().decode(cipherText));
+    return decrypt(cipherText.getBytes());
   }
+
+
 
   public File getPublicKeyFile(){
     return publicKeyFile;

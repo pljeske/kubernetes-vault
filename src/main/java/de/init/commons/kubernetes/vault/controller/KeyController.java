@@ -3,6 +3,7 @@ package de.init.commons.kubernetes.vault.controller;
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -17,10 +18,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 @RestController
 public class KeyController {
   private final RSAEncryption encryption;
+  @Value("${encryption.prefix}")
+  private String encryptionPrefix;
 
   @Autowired
   public KeyController(RSAEncryption encryption) {
@@ -49,8 +53,10 @@ public class KeyController {
   }
 
   @GetMapping("/encrypt")
-  public String encryptText(@RequestParam(value = "text", required = true) String text) throws Exception {
+  public Map<String,String> encryptText(@RequestParam(value = "text", required = true) String text) throws Exception {
     byte[] encryptedBytes = encryption.encrypt(text);
-    return Base64.encodeBase64String(encryptedBytes);
+    String base64EncryptedString = Base64.encodeBase64String(encryptedBytes);
+    return Map.of("Encrypted text", base64EncryptedString,
+        "Fill in", encryptionPrefix + base64EncryptedString);
   }
 }
