@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Map;
 
-public abstract class AbstractWatcher<T extends HasMetadata> implements Watcher<T>, EventWatcher<T> {
+public abstract class AbstractWatcher<T extends HasMetadata> implements Watcher<T> {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractWatcher.class);
   public static final String DECRYPTED_FOR = "decrypted_for";
 
@@ -40,17 +40,21 @@ public abstract class AbstractWatcher<T extends HasMetadata> implements Watcher<
       default: error(resource);
     }
   }
+  public abstract void added(T resource);
+  public abstract void modified(T resource);
+  public abstract void deleted(T resource);
+  public void error(T resource) {
+    LOG.error("ERROR: {}", resource.getMetadata().getName());
+  }
 
   @Override
   public void onClose(WatcherException e) {
-    String classString = this.getClass().toString();
-    LOG.error("{} closed because of an Exception.", classString, e);
+    LOG.error("{} closed because of an Exception.", getClass(), e);
   }
 
   @Override
   public void onClose() {
-    String classString = this.getClass().toString();
-    LOG.debug("{} closed gracefully.", classString);
+    LOG.debug("{} closed gracefully.", getClass());
   }
 
   public String decrypt(EnvVar variable) {
@@ -72,6 +76,17 @@ public abstract class AbstractWatcher<T extends HasMetadata> implements Watcher<
     } catch (Exception e) {
       decrypted = text;
       LOG.error("Variable couldn't be decrypted: {}", text, e);
+    }
+    return decrypted;
+  }
+
+  public String decryptBase64(String base64Text) {
+    String decrypted;
+    try {
+      decrypted = encryption.decryptBase64(base64Text);
+    } catch (Exception e) {
+      decrypted = base64Text;
+      LOG.error("Variable couldn't be decrypted: {}", base64Text, e);
     }
     return decrypted;
   }

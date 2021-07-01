@@ -7,9 +7,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,7 +20,7 @@ import java.util.Map;
 public class DeploymentWatcher extends AbstractWatcher<Deployment> {
   private static final Logger LOG = LoggerFactory.getLogger(DeploymentWatcher.class);
 
-  @Autowired
+  @Inject
   public DeploymentWatcher(KubernetesClient client, RSAEncryption encryption) {
     super(client, encryption);
   }
@@ -28,10 +28,6 @@ public class DeploymentWatcher extends AbstractWatcher<Deployment> {
   @Override
   public void added(Deployment resource) {
     Map<String,String> annotations = resource.getMetadata().getAnnotations();
-    if (annotations.containsKey(encryptionAnnotation)) {
-      String value = annotations.get(encryptionAnnotation);
-
-    }
     if (annotations.containsKey(encryptionAnnotation) && annotations.get(encryptionAnnotation).equals("true")) {
       List<Container> containers = resource.getSpec().getTemplate().getSpec().getContainers();
       for (Container container : containers) {
@@ -47,9 +43,10 @@ public class DeploymentWatcher extends AbstractWatcher<Deployment> {
             variablesToRemove.add(variable);
           }
         }
+
         if (!decryptedVariables.isEmpty()) {
           Secret secret = createSecret(decryptedVariables, resource);
-          resource.getMetadata().getAnnotations().put("decrypted", "true");
+
           secret = client.secrets().inNamespace(resource.getMetadata().getNamespace()).createOrReplace(secret);
           EnvFromSource envFromSource = new EnvFromSourceBuilder()
               .withNewSecretRef().withName(secret.getMetadata().getName()).endSecretRef().build();
@@ -59,9 +56,10 @@ public class DeploymentWatcher extends AbstractWatcher<Deployment> {
 
           variablesToRemove.forEach(var -> container.getEnv().remove(var));
         }
-        resource.getMetadata().getAnnotations().put(encryptionAnnotation, "false");
-        client.apps().deployments().inNamespace(resource.getMetadata().getNamespace()).createOrReplace(resource);
       }
+      // annotate successful decryption
+      resource.getMetadata().getAnnotations().put(encryptionAnnotation, "false");
+      client.apps().deployments().inNamespace(resource.getMetadata().getNamespace()).createOrReplace(resource);
     }
   }
 

@@ -2,7 +2,6 @@ package de.init.commons.kubernetes.vault.controller;
 
 import de.init.commons.kubernetes.vault.rsa.RSAEncryption;
 import org.apache.tomcat.util.codec.binary.Base64;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -13,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ public class KeyController {
   @Value("${encryption.prefix}")
   private String encryptionPrefix;
 
-  @Autowired
+  @Inject
   public KeyController(RSAEncryption encryption) {
     this.encryption = encryption;
   }
@@ -34,7 +34,6 @@ public class KeyController {
   @GetMapping("/publickey")
   public ResponseEntity<Resource> download() throws IOException {
     File file = encryption.getPublicKeyFile();
-//    File file = new File(getClass().getClassLoader().getResource(RSAEncryption.PUBLIC_KEY_PATH).getFile());
 
     HttpHeaders header = new HttpHeaders();
     header.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=public.key");
@@ -53,7 +52,7 @@ public class KeyController {
   }
 
   @GetMapping("/encrypt")
-  public Map<String,String> encryptText(@RequestParam(value = "text", required = true) String text) throws Exception {
+  public Map<String,String> encryptText(@RequestParam(value = "text") String text) throws Exception {
     byte[] encryptedBytes = encryption.encrypt(text);
     String base64EncryptedString = Base64.encodeBase64String(encryptedBytes);
     return Map.of("Encrypted text", base64EncryptedString,

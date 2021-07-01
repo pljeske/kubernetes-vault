@@ -5,9 +5,9 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +15,7 @@ import java.util.Map;
 public class ConfigMapWatcher extends AbstractWatcher<ConfigMap> {
   private static final Logger LOG = LoggerFactory.getLogger(ConfigMapWatcher.class);
 
-  @Autowired
+  @Inject
   public ConfigMapWatcher(KubernetesClient client, RSAEncryption encryption) {
     super(client, encryption);
   }

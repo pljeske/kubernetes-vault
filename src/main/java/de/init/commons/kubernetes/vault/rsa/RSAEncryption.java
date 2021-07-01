@@ -9,7 +9,6 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.security.*;
 import java.security.spec.EncodedKeySpec;
@@ -30,7 +29,7 @@ public class RSAEncryption {
   private final PublicKey publicKey;
   private final PrivateKey privateKey;
 
-  public RSAEncryption() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
+  public RSAEncryption() throws NoSuchAlgorithmException, InvalidKeySpecException {
     byte[] privateKeyBytes = getKeyBytes(PRIVATE_KEY_PATH);
     EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
 
@@ -42,22 +41,7 @@ public class RSAEncryption {
     privateKey = keyFactory.generatePrivate(privateKeySpec);
   }
 
-  private byte[] getKeyBytes(String path) throws IOException {
-//    byte[] keyBytes;
-//    File keyFile = null;
-//    URL url = getClass().getClassLoader().getResource(path);
-//    if (url != null) {
-//      keyFile = new File(url.getFile());
-//    }
-//    try {
-//      keyBytes = Files.readAllBytes(keyFile.toPath());
-//    } catch (Exception e) {
-//      keyFile = new File("./" + path);
-//      keyBytes = Files.readAllBytes(keyFile.toPath());
-//    }
-//    if (path.equals(PUBLIC_KEY_PATH)) {
-//      publicKeyFile = keyFile;
-//    }
+  private byte[] getKeyBytes(String path) {
     byte[] keyBytes;
     try {
       File keyFile = new File(path);
