@@ -13,7 +13,7 @@ public class KubernetesConfig {
 
   @Bean
   public KubernetesClient getKubernetesClient() {
-    if (kubernetesApiUrl == null || kubernetesApiUrl.equals("")) {
+    if (kubernetesApiUrl.equals("")) {
       return new DefaultKubernetesClient();
     } else {
       return new DefaultKubernetesClient(kubernetesApiUrl);

@@ -26,6 +26,8 @@
     <docker.repository.prefix>pljc</docker.repository.prefix>
     <docker.repository.suffix>${project.artifactId}</docker.repository.suffix>
     <docker.image.tag>latest</docker.image.tag>
+
+    <spring.cloud.version>3.0.3</spring.cloud.version>
   </properties>
 
   <dependencies>
@@ -55,6 +57,18 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-configuration-processor</artifactId>
       <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-vault-config</artifactId>
+      <version>${spring.cloud.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-vault-config-databases</artifactId>
+      <version>${spring.cloud.version}</version>
     </dependency>
 
 <!--    <dependency>-->
