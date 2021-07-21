@@ -4,13 +4,12 @@ import com.bettercloud.vault.VaultException;
 import de.init.commons.kubernetes.vault.crd.VaultSecret;
 import de.init.commons.kubernetes.vault.crd.VaultSecretStatus;
 import de.init.commons.kubernetes.vault.service.ResourceCreatorService;
+import de.init.commons.kubernetes.vault.service.VaultConnector;
 import de.init.commons.kubernetes.vault.util.Base64Encoder;
 import de.init.commons.kubernetes.vault.util.HashUtil;
-import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
-import io.javaoperatorsdk.operator.api.UpdateControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,18 +61,18 @@ public class VaultSecretControllerFabric8 implements Watcher<VaultSecret> {
         String name = vaultSecret.getMetadata().getName();
         String secretReference = vaultSecret.getSpec().getSecretReference();
 
-        LOG.info("Creating or updating VaultSecret: {}", vaultSecret.getMetadata().getName());
-        LOG.info("Vault reference: {}", vaultSecret.getSpec().getSecretReference());
+        LOG.info("Creating VaultSecret {} in namespace {} with vault reference {}", name, namespace, secretReference);
 
         try {
-            Map<String, String> secretData = vault.getCredentials(vaultSecret.getSpec().getSecretReference());
+            Map<String, String> secretData = vault.getCredentials(secretReference);
             String secretHash = HashUtil.getHash(secretData);
             Base64Encoder.encodeMapValues(secretData);
 
+            // TODO: find proper annotations
             Map<String, String> annotations = Map.of("vaultsecret", "true");
 
-            resourceCreatorService.createSecretInCluster(vaultSecret.getMetadata().getName(),
-                    vaultSecret.getMetadata().getNamespace(), annotations, secretData);
+            resourceCreatorService.createSecretInCluster(name,
+                    namespace, annotations, secretData);
 
             VaultSecretStatus status = new VaultSecretStatus();
             status.setSecretCreated(true);
@@ -82,16 +81,20 @@ public class VaultSecretControllerFabric8 implements Watcher<VaultSecret> {
 
             vaultSecret.setStatus(status);
 
-            client.customResources(VaultSecret.class).inNamespace(vaultSecret.getMetadata().getNamespace())
-//            return UpdateControl.updateCustomResourceAndStatus(vaultSecret);
+            client.customResources(VaultSecret.class).inNamespace(namespace).updateStatus(vaultSecret);
         } catch (VaultException e) {
             LOG.error("Getting the data from vault with reference '{}' failed.",
-                    vaultSecret.getSpec().getSecretReference(), e);
-//            return UpdateControl.noUpdate();
+                    secretReference, e);
         }
     }
 
     private void resourceModified(VaultSecret vaultSecret) {
+        String namespace = vaultSecret.getMetadata().getNamespace();
+        String name = vaultSecret.getMetadata().getName();
+        String secretReference = vaultSecret.getSpec().getSecretReference();
+
+        LOG.info("Modifying VaultSecret {} in namespace {} with vault reference {}", name, namespace, secretReference);
+
 
     }
 

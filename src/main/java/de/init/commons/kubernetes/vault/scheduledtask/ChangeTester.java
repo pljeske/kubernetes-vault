@@ -3,13 +3,12 @@ package de.init.commons.kubernetes.vault.scheduledtask;
 import com.bettercloud.vault.VaultException;
 import de.init.commons.kubernetes.vault.crd.VaultSecret;
 import de.init.commons.kubernetes.vault.service.ResourceCreatorService;
+import de.init.commons.kubernetes.vault.service.VaultConnector;
 import de.init.commons.kubernetes.vault.util.HashUtil;
-import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -42,7 +41,7 @@ public class ChangeTester {
 //        this.lockedSecrets = new HashSet<>();
     }
 
-    @Async
+//    @Async
     @Scheduled(fixedRateString = "${vaultcheck.timedelay}")
     public void checkVaultForChanges() {
         ZonedDateTime timeMinutesAgo = ZonedDateTime.now().minusMinutes(maxMinutes);

@@ -1,4 +1,4 @@
-package de.init.commons.kubernetes.vault.vault;
+package de.init.commons.kubernetes.vault.service;
 
 import com.bettercloud.vault.Vault;
 import com.bettercloud.vault.VaultConfig;

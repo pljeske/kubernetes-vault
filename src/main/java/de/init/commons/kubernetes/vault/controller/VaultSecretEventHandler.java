@@ -4,9 +4,9 @@ import com.bettercloud.vault.VaultException;
 import de.init.commons.kubernetes.vault.crd.VaultSecret;
 import de.init.commons.kubernetes.vault.crd.VaultSecretStatus;
 import de.init.commons.kubernetes.vault.service.ResourceCreatorService;
+import de.init.commons.kubernetes.vault.service.VaultConnector;
 import de.init.commons.kubernetes.vault.util.Base64Encoder;
 import de.init.commons.kubernetes.vault.util.HashUtil;
-import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import org.slf4j.Logger;
@@ -35,18 +35,21 @@ public class VaultSecretEventHandler implements ResourceEventHandler<VaultSecret
 
     @Override
     public void onAdd(VaultSecret vaultSecret) {
-        LOG.info("Creating or updating VaultSecret: {}", vaultSecret.getMetadata().getName());
-        LOG.info("Vault reference: {}", vaultSecret.getSpec().getSecretReference());
+        String namespace = vaultSecret.getMetadata().getNamespace();
+        String name = vaultSecret.getMetadata().getName();
+        String secretReference = vaultSecret.getSpec().getSecretReference();
+
+        LOG.info("Creating VaultSecret {} in namespace {} with vault reference {}", name, namespace, secretReference);
 
         try {
-            Map<String, String> secretData = vault.getCredentials(vaultSecret.getSpec().getSecretReference());
+            Map<String, String> secretData = vault.getCredentials(secretReference);
             String secretHash = HashUtil.getHash(secretData);
             Base64Encoder.encodeMapValues(secretData);
 
             Map<String, String> annotations = Map.of("vaultsecret", "true");
 
-            resourceCreatorService.createSecretInCluster(vaultSecret.getMetadata().getName(),
-                    vaultSecret.getMetadata().getNamespace(), annotations, secretData);
+            resourceCreatorService.createSecretInCluster(name,
+                    namespace, annotations, secretData);
 
             VaultSecretStatus status = new VaultSecretStatus();
             status.setSecretCreated(true);
@@ -56,19 +59,23 @@ public class VaultSecretEventHandler implements ResourceEventHandler<VaultSecret
             vaultSecret.setStatus(status);
 
             client.customResources(VaultSecret.class)
-                    .inNamespace(vaultSecret.getMetadata().getNamespace()).withName(vaultSecret.getMetadata().getName())
+                    .inNamespace(namespace).withName(name)
                     .updateStatus(vaultSecret);
         } catch (VaultException e) {
             LOG.error("Getting the data from vault with reference '{}' failed.",
-                    vaultSecret.getSpec().getSecretReference(), e);
+                    secretReference, e);
         }
     }
 
     @Override
     public void onUpdate(VaultSecret oldResource, VaultSecret newResource) {
-        LOG.info("Resource {} in namespace {} was updated.",
+        LOG.info("VaultSecret {} in namespace {} was updated.",
                 oldResource.getMetadata().getName(),
                 oldResource.getMetadata().getNamespace());
+
+        if (!oldResource.getSpec().getSecretReference().equals(newResource.getSpec().getSecretReference())) {
+            onAdd(newResource);
+        }
     }
 
     @Override

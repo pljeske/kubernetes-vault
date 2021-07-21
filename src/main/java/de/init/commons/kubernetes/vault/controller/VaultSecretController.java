@@ -4,11 +4,16 @@ import com.bettercloud.vault.VaultException;
 import de.init.commons.kubernetes.vault.crd.VaultSecret;
 import de.init.commons.kubernetes.vault.crd.VaultSecretStatus;
 import de.init.commons.kubernetes.vault.service.ResourceCreatorService;
+import de.init.commons.kubernetes.vault.service.VaultConnector;
 import de.init.commons.kubernetes.vault.util.Base64Encoder;
 import de.init.commons.kubernetes.vault.util.HashUtil;
-import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.api.*;
+import io.fabric8.kubernetes.client.dsl.Resource;
+import io.javaoperatorsdk.operator.api.Context;
+import io.javaoperatorsdk.operator.api.Controller;
+import io.javaoperatorsdk.operator.api.DeleteControl;
+import io.javaoperatorsdk.operator.api.ResourceController;
+import io.javaoperatorsdk.operator.api.UpdateControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +53,9 @@ public class VaultSecretController implements ResourceController<VaultSecret> {
     public UpdateControl<VaultSecret> createOrUpdateResource(VaultSecret vaultSecret, Context<VaultSecret> context) {
         LOG.info("Creating or updating VaultSecret: {}", vaultSecret.getMetadata().getName());
         LOG.info("Vault reference: {}", vaultSecret.getSpec().getSecretReference());
+
+        Resource<VaultSecret> existingSecret = client.customResources(VaultSecret.class)
+                .inNamespace(vaultSecret.getMetadata().getNamespace()).withName(vaultSecret.getMetadata().getName());
 
 
 

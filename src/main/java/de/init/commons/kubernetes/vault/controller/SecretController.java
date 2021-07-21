@@ -1,7 +1,7 @@
 package de.init.commons.kubernetes.vault.controller;
 
 import com.bettercloud.vault.VaultException;
-import de.init.commons.kubernetes.vault.vault.VaultConnector;
+import de.init.commons.kubernetes.vault.service.VaultConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +12,7 @@ import javax.websocket.server.PathParam;
 import java.util.Collections;
 import java.util.Map;
 
-//@RefreshScope
+// TODO: just for testing - delete later
 @RestController
 public class SecretController {
     private static final Logger LOG = LoggerFactory.getLogger(SecretController.class);
