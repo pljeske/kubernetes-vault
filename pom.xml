@@ -59,16 +59,22 @@
       <optional>true</optional>
     </dependency>
 
-    <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-vault-config</artifactId>
-      <version>${spring.cloud.version}</version>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>org.springframework.cloud</groupId>-->
+<!--      <artifactId>spring-cloud-starter-vault-config</artifactId>-->
+<!--      <version>${spring.cloud.version}</version>-->
+<!--    </dependency>-->
+
+<!--    <dependency>-->
+<!--      <groupId>org.springframework.cloud</groupId>-->
+<!--      <artifactId>spring-cloud-vault-config-databases</artifactId>-->
+<!--      <version>${spring.cloud.version}</version>-->
+<!--    </dependency>-->
 
     <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-vault-config-databases</artifactId>
-      <version>${spring.cloud.version}</version>
+      <groupId>com.bettercloud</groupId>
+      <artifactId>vault-java-driver</artifactId>
+      <version>5.1.0</version>
     </dependency>
 
 <!--    <dependency>-->
