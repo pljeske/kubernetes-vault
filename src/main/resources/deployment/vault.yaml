@@ -63,6 +63,13 @@ spec:
         - name: operator
           image: docker.io/pljc/kubernetes-vault:latest
           imagePullPolicy: Always
+          env:
+            - name: KUBERNETES_API_URL
+              value: ""
+            - name: VAULT_ADDRESS
+              value: http://hashicorpvault:8200
+            - name: VAULT_ROOT-TOKEN
+              value: myroottoken
           ports:
             - containerPort: 8081
             - containerPort: 8080

@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class VaultSecretStatus {
     private boolean secretCreated;
-    private String dateSecretCreated;
-    private String dateSecretChanged;
+    private String secretHash;
+    private String lastCheckedForChanges;
 }
