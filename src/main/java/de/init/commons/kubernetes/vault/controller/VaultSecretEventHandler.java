@@ -8,7 +8,7 @@ import de.init.commons.kubernetes.vault.util.Base64Encoder;
 import de.init.commons.kubernetes.vault.util.HashUtil;
 import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.api.*;
+import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,39 +17,26 @@ import java.util.Map;
 
 /**
  * @author Peer-Lucas Jeske
- * created 09.07.2021
+ * created 21.07.2021
  */
-@Controller
-public class VaultSecretController implements ResourceController<VaultSecret> {
-    private static final Logger LOG = LoggerFactory.getLogger(VaultSecretController.class);
+public class VaultSecretEventHandler implements ResourceEventHandler<VaultSecret> {
+    private static final Logger LOG = LoggerFactory.getLogger(VaultSecretEventHandler.class);
 
     private final KubernetesClient client;
     private final VaultConnector vault;
     private final ResourceCreatorService resourceCreatorService;
 
-    public VaultSecretController(KubernetesClient client, VaultConnector vault,
-            ResourceCreatorService resourceCreatorService) {
-        this.client = client;
-        this.vault = vault;
-        this.resourceCreatorService = resourceCreatorService;
+    public VaultSecretEventHandler(KubernetesClient client, VaultConnector vault,
+                                   ResourceCreatorService resourceCreatorService) {
+            this.client = client;
+            this.vault = vault;
+            this.resourceCreatorService = resourceCreatorService;
     }
 
     @Override
-    public DeleteControl deleteResource(VaultSecret resource, Context<VaultSecret> context) {
-        LOG.info("Deleting resource: {}", resource.getMetadata().getName());
-        // TODO: implement test to find out if "ownerReference" was used so Kubernetes garbage collection would take
-        //  care of the deletion
-        client.secrets().inNamespace(resource.getMetadata().getNamespace())
-                .withName(resource.getMetadata().getName()).delete();
-        return DeleteControl.DEFAULT_DELETE;
-    }
-
-    @Override
-    public UpdateControl<VaultSecret> createOrUpdateResource(VaultSecret vaultSecret, Context<VaultSecret> context) {
+    public void onAdd(VaultSecret vaultSecret) {
         LOG.info("Creating or updating VaultSecret: {}", vaultSecret.getMetadata().getName());
         LOG.info("Vault reference: {}", vaultSecret.getSpec().getSecretReference());
-
-
 
         try {
             Map<String, String> secretData = vault.getCredentials(vaultSecret.getSpec().getSecretReference());
@@ -68,11 +55,26 @@ public class VaultSecretController implements ResourceController<VaultSecret> {
 
             vaultSecret.setStatus(status);
 
-            return UpdateControl.updateCustomResourceAndStatus(vaultSecret);
+            client.customResources(VaultSecret.class)
+                    .inNamespace(vaultSecret.getMetadata().getNamespace()).withName(vaultSecret.getMetadata().getName())
+                    .updateStatus(vaultSecret);
         } catch (VaultException e) {
             LOG.error("Getting the data from vault with reference '{}' failed.",
                     vaultSecret.getSpec().getSecretReference(), e);
-            return UpdateControl.noUpdate();
         }
+    }
+
+    @Override
+    public void onUpdate(VaultSecret oldResource, VaultSecret newResource) {
+        LOG.info("Resource {} in namespace {} was updated.",
+                oldResource.getMetadata().getName(),
+                oldResource.getMetadata().getNamespace());
+    }
+
+    @Override
+    public void onDelete(VaultSecret vaultSecret, boolean b) {
+        LOG.info("Resource {} in namespace {} was deleted.",
+                vaultSecret.getMetadata().getName(),
+                vaultSecret.getMetadata().getNamespace());
     }
 }

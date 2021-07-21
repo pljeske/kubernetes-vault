@@ -1,11 +1,14 @@
 package de.init.commons.kubernetes.vault;
 
 import de.init.commons.kubernetes.vault.controller.VaultSecretController;
+import de.init.commons.kubernetes.vault.crd.VaultSecret;
 import de.init.commons.kubernetes.vault.service.ResourceCreatorService;
 import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import de.init.commons.kubernetes.vault.watcher.DeploymentWatcher;
 import de.init.commons.kubernetes.vault.watcher.SecretWatcher;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
+import io.fabric8.kubernetes.client.informers.SharedInformerFactory;
 import io.javaoperatorsdk.operator.Operator;
 import io.javaoperatorsdk.operator.config.runtime.DefaultConfigurationService;
 import org.springframework.boot.CommandLineRunner;
@@ -47,5 +50,10 @@ public class KubernetesVaultApp implements CommandLineRunner {
     VaultSecretController vaultSecretController = new VaultSecretController(client, vault, resourceCreatorService);
     Operator operator = new Operator(client, DefaultConfigurationService.instance());
     operator.register(vaultSecretController);
+
+    SharedInformerFactory informerFactory = client.informers();
+    SharedIndexInformer<VaultSecret> vaultSecretSharedIndexInformer = informerFactory
+            .sharedIndexInformerForCustomResource(VaultSecret.class, 10 * 60 * 1000);
+
   }
 }
