@@ -14,7 +14,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.inject.Inject;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -45,7 +45,7 @@ public class ChangeTester {
     @Async
     @Scheduled(fixedRateString = "${vaultcheck.timedelay}")
     public void checkVaultForChanges() {
-        LocalDateTime timeMinutesAgo = LocalDateTime.now().minusMinutes(maxMinutes);
+        ZonedDateTime timeMinutesAgo = ZonedDateTime.now().minusMinutes(maxMinutes);
 
         List<VaultSecret> allVaultSecrets = client.customResources(VaultSecret.class).inAnyNamespace().list().getItems();
 //        allVaultSecrets.removeAll(this.lockedSecrets);
@@ -53,7 +53,9 @@ public class ChangeTester {
         for (VaultSecret vaultSecret : allVaultSecrets) {
 
             String lastCheckedString = vaultSecret.getStatus().getLastCheckedForChanges();
-            LocalDateTime lastChecked = LocalDateTime.parse(lastCheckedString);
+
+            ZonedDateTime lastChecked = ZonedDateTime
+                    .parse(lastCheckedString, ResourceCreatorService.DATE_TIME_FORMATTER);
             if (lastChecked.isBefore(timeMinutesAgo)) {
                 checkForChangesInVault(vaultSecret);
             }

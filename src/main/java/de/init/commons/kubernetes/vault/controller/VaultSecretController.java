@@ -8,15 +8,11 @@ import de.init.commons.kubernetes.vault.util.Base64Encoder;
 import de.init.commons.kubernetes.vault.util.HashUtil;
 import de.init.commons.kubernetes.vault.vault.VaultConnector;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.api.Context;
-import io.javaoperatorsdk.operator.api.Controller;
-import io.javaoperatorsdk.operator.api.DeleteControl;
-import io.javaoperatorsdk.operator.api.ResourceController;
-import io.javaoperatorsdk.operator.api.UpdateControl;
+import io.javaoperatorsdk.operator.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 /**
@@ -68,7 +64,7 @@ public class VaultSecretController implements ResourceController<VaultSecret> {
             VaultSecretStatus status = new VaultSecretStatus();
             status.setSecretCreated(true);
             status.setSecretHash(secretHash);
-            status.setLastCheckedForChanges(LocalDateTime.now().format(ResourceCreatorService.DATE_TIME_FORMATTER));
+            status.setLastCheckedForChanges(ZonedDateTime.now().format(ResourceCreatorService.DATE_TIME_FORMATTER));
 
             vaultSecret.setStatus(status);
 
